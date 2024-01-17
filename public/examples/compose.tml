@@ -1,0 +1,11 @@
+//
+// TinyML supports function composition with this small helper function
+//
+let compose f g = fun x -> f (g x)
+
+let neg x = 0 - x
+let mul10 x = x * 10
+
+let negx10 = compose neg mul10
+
+print (negx10 5)

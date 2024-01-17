@@ -1,0 +1,10 @@
+//
+// print : any -> unit
+//
+// Writes value to console
+
+print 13
+
+print (1,2)
+
+print print

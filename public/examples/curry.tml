@@ -1,0 +1,10 @@
+#
+# Function currying is performed in the parser, such that functions like `sweet` 
+# are translated into the single-argument form of `sour`.
+#
+
+let sour = fun x -> fun y -> x + y
+
+let sweet x y = x + y
+
+()

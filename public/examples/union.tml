@@ -1,0 +1,31 @@
+
+// TinyML has a basic union type with two cases 'case1' and 'case2'
+//
+
+let x = union<num, num*num>.case1 10
+let y = union<num, num*num>.case2 (1,2)
+
+print x
+print y
+
+//
+// You can shorten 'union' to 'u'
+
+let x = u<num, num*num>.case1 10
+let y = u<num, num*num>.case2 (1,2)
+
+//
+// You can use '_' as a stand-in for the other case type
+
+let x = u<num, _>.case1 10
+let y = u<_, num*num>.case2 (1,2)
+
+//
+// Finally, you can also just let the type checker work it all out
+
+let x = _.case1 10
+let y = _.case2 (1,2)
+
+// Caveat: this final case isn't implemented correctly. The correct values are constructed
+// but you can easily defeat the type system.
+()

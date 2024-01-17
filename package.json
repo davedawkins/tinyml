@@ -1,0 +1,34 @@
+{
+  "name": "fsim",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "dotnet fable src/App -o build && vite build",
+    "start": "dotnet fable watch src/App --verbose -o build --run vite",
+    "preview": "vite preview",
+    "clean": "dotnet fable clean -o build --yes",
+    "deploy:linode": "bash deployToLinode.sh ./dist tinyml '' deploy@213.52.129.104 /home/deploy/apps"  },
+  "author": "David Dawkins",
+  "license": "ISC",
+  "dependencies": {
+    "@observablehq/plot": "^0.6.10",
+    "@rollup/browser": "^3.26.2",
+    "@ts-morph/bootstrap": "^0.20.0",
+    "@types/d3": "^7.4.0",
+    "@zip.js/zip.js": "^2.6.14",
+    "d3": "^7.8.5",
+    "htl": "^0.3.1",
+    "monaco-editor": "^0.36.1",
+    "neuicons": "^1.9.0",
+    "source-map": "^0.7.4",
+    "ts-morph": "^19.0.0",
+    "tsup": "^7.2.0",
+    "typescript": "^5.1.6"
+  },
+  "devDependencies": {
+    "fable-publish-utils": "^2.2.0",
+    "vite": "^4.3.9",
+    "vite-tsconfig-paths": "^4.2.0"
+  }
+}

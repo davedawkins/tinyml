@@ -1,0 +1,167 @@
+body {
+    background-color: #b3beca;
+/*    font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif; */
+    font-family: 'Titillium Web', sans-serif;
+}
+
+.page {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.wh100 {
+    height: 100%;
+    width: 100%;
+}
+
+.padding {
+    padding: 0.5rem;
+}
+
+.messages, .files {
+    font-family: 'Courier New', Courier, monospace;
+    border: 1px solid #dddddd;
+    background-color: white;
+    overflow-y: auto;
+}
+
+.messages pre {
+    white-space: break-spaces;
+}
+
+.ast {
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    font-size: 80%;
+    border: 1px solid #dddddd;
+    background-color: white;
+    overflow-y: auto;
+    padding: 0.5rem;
+}
+
+.ast-type {
+    color: #cccccc;
+}
+
+.ast span {
+    user-select: none;
+}
+
+.ast .ast-label.selected {
+    background-color: #dddddd;
+}
+.ast i {
+    padding-right: 0.5rem;
+    color: #dddddd;
+}
+
+.ast li {
+    list-style-type: none;
+}
+
+.ast ul {
+    list-style-type: none;
+    display: none;
+    margin: 0;
+    padding: 4px;
+    padding-left: 1.3rem;
+    border-left: 1px solid #f2f2f2;
+}
+
+.ast-node ul.expanded {
+    display: block;
+}
+
+.expand-button {
+    width: 0;
+    height: 0;
+    border-top: 0.4rem solid transparent;
+    border-left: 0.4rem solid #dddddd;
+    border-bottom: 0.4rem solid transparent;
+
+    display: inline-block;
+    margin-right: 0.5rem;
+    cursor: pointer;
+    transform: rotate(0deg);
+    transition-duration: 40ms;
+}
+
+.expand-button.empty {
+    border: transparent;
+    min-width: 0.4rem;
+}
+
+.expand-button.expanded {
+    transform: rotate(90deg);
+    transition-duration: 40ms;
+}
+
+.file {
+    user-select:none;
+    cursor: pointer;
+}
+
+.file.selected {
+    background-color: #dddddd;
+}
+
+.columns {
+    display: flex;
+    flex-direction: row;
+}
+
+.row {
+    display: flex;
+    flex-direction: row;
+}
+
+.gap {
+    gap: 0.5rem;
+}
+
+.column {
+    display: flex;
+    flex-direction: column;
+}
+
+button {
+    border: none;
+}
+
+button {
+    border: 1px solid hsla(257.6, 56.9%, 20%, 0.10);
+    border-radius: 15px;
+    background-color: hsla(257.6, 56.9%, 20%, 0.10);
+    color: black;
+    padding: 0.25rem 1rem;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: hsla(257.6, 56.9%, 20%, 0.20);
+}
+
+button:active {
+    background-color: hsla(257.6, 56.9%, 20%, 0.40);
+}
+
+.toolbar button {
+    font-size: 80%;
+}
+
+.columns>*, .column>*, .row>* {
+    /* flex-grow: 1;
+    flex-shrink: 1; */
+    min-width: 0px;
+    min-height: 0px;
+}
+
+.minwh {
+    min-width: 0px;
+    min-height: 0px;
+}
+
+.main {
+    display: grid;
+    grid-template-columns: 2fr 4fr 6fr;
+}

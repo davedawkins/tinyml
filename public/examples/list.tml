@@ -1,0 +1,19 @@
+//
+// This is a TinyML implementation of a list type using unions, tuples and recursion
+
+let nil = _.case2 ()
+
+let cons x xs = 
+    u<num * _,unit>.case1 (x, xs)
+
+let rec plist list = 
+    (match list with 
+        | x -> 
+            do
+                print (x#1)
+                plist (x#2)
+        | y -> 
+            ())
+        
+plist nil
+plist (cons 1 (cons 2 (cons 3 nil)))

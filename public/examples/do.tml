@@ -1,0 +1,29 @@
+// do allows sequencing of expressions. The final expression becomes the value of the 'do' sequence
+
+let calc x y =
+    do
+        print x
+        print y
+        x * x + y * y
+
+print (calc 3 4)
+
+// There is an implicit 'do' for all expressions at top-level of a file. The following print statements
+// will be collected into a 'do' that will be the 'in' expression for the preceding let statement.
+// Delete the code before this comment and recompile and the 'do' will be a the root AST node.
+
+print 1
+print 2
+
+// Do allows TinyML to read more like a procedural language.
+// In F#, you will be warned if any of the expressions preceding the final result expression return
+// a value other than unit, because these values are not consumed - they are lost. TinyML doesn't yet
+// issue that warning, but you can still explicitly ignore those values to show your your intentions 
+// with a ignore function like this:
+
+// ignore: 'a -> unit
+let ignore x = ()  // Takes value of any type, and ignores it (returns unit)
+
+ignore (2 * 3)
+print 0
+

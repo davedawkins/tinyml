@@ -1,0 +1,35 @@
+//
+// The TinyML parser is identation-based. It mostly works as expected but has at least one quirk.
+//
+// Take the following one-line 'if' expression
+
+let x = if true then 1 else 0
+
+//
+// We can use indentation to rewrite this as:
+
+let x =
+    if true then 1 else 0
+
+//
+// We can further and indent the if too; the quirk is that the else must match the indentation (until I fix it)
+
+let x =
+    if true then 
+        1 
+        else 
+        0
+
+//
+// Match statements indent nicely, but require a surrounding set of parentheses (also to be fixed)
+
+let x c = 
+    (match c with | x -> 1 | x -> 2)
+
+let x c = 
+    (match c with 
+        | x -> 1 
+        | x -> 2
+        )
+
+()

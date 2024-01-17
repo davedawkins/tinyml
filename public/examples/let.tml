@@ -1,0 +1,38 @@
+// This is a classic ML let-in binding.  It defines 'n' for use in the expression following 'in' and so is
+// an expression that yields 17
+let n = 17 in n 
+
+// eg
+
+print (let n = 17 in n)
+
+// 'let' is more commonly seen defining a variable in apparent isolatio from its usage. For example:
+
+let n = 17
+
+let b = n * 2
+
+print b
+
+// This is sugar for the canonical form
+
+let b = 17 in let b = n * 2 in print b
+
+// For this reason, let will always demand that is followed by an expression, since 'let x = y' on its own
+// does not define an expression to evaluate
+
+
+// -- Internals ----------------------------
+//
+// Internally, let it is desugared into
+
+(fun n -> n) 17
+
+// Example (sugared)
+
+let sum x y = x + y in sum 2 3
+
+// Example (desugared)
+
+(fun x -> fun y -> x + y) 2 3
+

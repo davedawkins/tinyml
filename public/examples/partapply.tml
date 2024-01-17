@@ -1,0 +1,8 @@
+// Partial application in TinyML
+//
+
+let add x y = x + y
+
+let add2 = add 2
+
+print (add2 3)

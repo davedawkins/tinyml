@@ -1,0 +1,15 @@
+//
+// TinyML's 'match; allows dispatching of union values
+
+let c1 = u<num, _>.case1 100
+let c2 = u<_, num*num>.case2 (10,20)
+
+let calc n = if n = 0 then c1 else c2
+
+let result n =
+    (match calc n with
+        | x -> x
+        | x -> x#2)
+
+print (result 0)  // Expect 100
+print (result 1)  // Expect  20

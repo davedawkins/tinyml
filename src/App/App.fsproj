@@ -1,0 +1,42 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <DefineConstants>$(DefineConstants);FABLE_COMPILER;TINYML</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Types.fs" />
+    <Compile Include="Log.fs" />
+    <Compile Include="BlobUrl.fs" />
+    <Compile Include="Monaco.fs" />
+    <Compile Include="FileEditor.fs" />
+    <Compile Include="Parsec.fs" />
+    <Compile Include="ParserUtil.fs" />
+    <Compile Include="TypeInference.fs" />
+
+    <Compile Include="TinyMLCompiler/TinyMLAst.fs" />
+    <Compile Include="TinyMLCompiler/TinyMLTypeInference.fs" />
+    <Compile Include="TinyMLCompiler/TinyMLEvaluator.fs" />
+    <Compile Include="TinyMLCompiler/TinyMLParser.fs" />
+    <Compile Include="TinyMLCompiler/TinyMLCompiler.fs" />
+
+
+    <Compile Include="Tests.fs" />
+    <Compile Include="AppCss.fs" />
+    <Compile Include="App.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../../sutil-oxide/src/SutilOxide/SutilOxide.fsproj" />
+    <ProjectReference Include="../../../sutil/src/Sutil/Sutil.fsproj"/>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Fable.ZipJs" Version="1.0.1" />
+    <PackageReference Include="Fable.Formatting.Markdown" Version="1.0.1" />
+    <PackageReference Include="Fable.Fetch" Version="2.2.0" />
+    <PackageReference Include="Fable.Browser.Dom" Version="2.*" />
+    <PackageReference Include="Fable.Browser.Worker" Version="1.*" />
+    <PackageReference Include="Fable.Core" Version="3.7.1" />
+    <PackageReference Include="Fable.Promise" Version="3.2.0" />
+    <PackageReference Include="Thoth.Json" Version="10.0.0" />
+<!--    <PackageReference Include="Sutil" Version="2.0.11" /> -->
+  </ItemGroup>
+</Project>

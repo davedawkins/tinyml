@@ -1,0 +1,19 @@
+// Tuples in TinyML are restricted to arity 2.
+// As in F#, the ',' is the tuple operator, not the brackets! 
+//
+
+let pair x y = x, y
+
+let fst tp = tp#1
+let snd tp = tp#2
+
+print (1,2)
+print (pair 1 2)
+print (fst (1,2))
+print (snd (1,2))
+
+let thr = ((1,2),3)
+print thr
+print (fst (fst thr))
+print (snd (fst thr))
+print (snd thr)

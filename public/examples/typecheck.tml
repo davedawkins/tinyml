@@ -1,0 +1,18 @@
+//
+// Types are inferred using a simple Hindley-Milner algorithm, as outlined in Tomas's course.
+// I've 'enhanced' it slightly to capture symbol names. 
+
+// You can hover over a symbol name and see its inferred type. You can also see inferred types
+// in the AST viewer to the right. 
+
+// I have a lot more to learn about type inference so this is a weak part of my implementation of TinyML
+
+let a = 10
+
+let f = fun x -> x + 2
+
+let pair x y = x, y
+
+let fst t = t#1
+
+fst (1,2)

@@ -1,0 +1,11 @@
+// The following data types are supported in TinyML. Hover over each
+// 'x' to see its inferred type.
+
+let x = 1                 in print x // number
+let x = (1 = 1)           in print x // boolean
+let x = (1,2)             in print x // tuple
+let x = (fun id -> id)    in print x // function
+let x = ()                in print x // unit
+let x = u<num,_>.case1 42 in print x // union
+
+()
