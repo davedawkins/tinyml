@@ -19,7 +19,6 @@ let examples = [
     "compose.tml"
     "curry.tml"
     "datatypes.tml"
-    "desugarargs.tml"
     "do.tml"
     "indent.tml"
     "let.tml"
