@@ -56,8 +56,7 @@ let matchwith : Parser<Expression,UserState> =
         (expr .>> ws) .>>
         (keyword "with" .>> wsb) .>>.
         caseOf  .>> wsb .>> ws .>>.
-        caseOf  .>> wsb .>> ws
-//        (many1 (wsb >>. patterncase))
+        caseOf
     )
     |>> (fun ((e,(v1,e1)),(v2,e2)) -> Match (e,v1,e1,v2,e2))
     <!> "match"

@@ -1,5 +1,8 @@
 ## TinyML
 
+> [!TIP]
+> 18-Jan-24: Examples have been updated (see [Updates]) - use `Reset` to reload
+
 This is a follow-on project based on Tomas Petricek's Tiny Systems course:
 
 https://d3s.mff.cuni.cz/teaching/nprg077/
@@ -32,12 +35,31 @@ You will see example programs in the File explorer that you can load, compile an
 
 Feel free to edit these yourself, and to create your own programs.
 
+## Example Code
+
+A few random snippets:
+
+```fs
+let rec fac n = if n = 1 then 1 else n * fac (n - 1)
+
+let pair x y = x,y
+let fst t = t#1
+let snd t = t#2
+
+let pairWith x = pair x
+
+let ignore x = ()
+let compose f g = fun x -> f (g x)
+
+print (fac 5)
+```
+
 ## About The Parser
 
 I'm using Parsec.fs, a nearly complete API-compatible port of FParsec to Fable `cannorin` (see Links).
 
 I had to learn how to parse indentation sensitive syntax, and I found this by the FParsec author to be
-invaluation: LINK
+invaluable.
 
 Error reporting is something I'm still learning how to improve. 
 
@@ -138,6 +160,12 @@ While playing with this project, I had the following ideas I was unable to resis
 - Added JSX as a native expression (I have a prototype of this too)
 - Extend type system (add strings, proper DUs, records)
 - Introduce reactive expressions as a first-class concept (think Svelte)
+
+## Updates
+
+18-Jan-24: 
+- No longer need parens around match expressions (updates to: `indent.tml`, `list.tml`)
+- README typos, example snippets
 
 ## Links
 

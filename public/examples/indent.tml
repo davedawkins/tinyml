@@ -21,15 +21,14 @@ let x =
         0
 
 //
-// Match statements indent nicely, but require a surrounding set of parentheses (also to be fixed)
+// Match statements indent nicely too
 
 let x c = 
-    (match c with | x -> 1 | x -> 2)
+    match c with | x -> 1 | x -> 2
 
 let x c = 
-    (match c with 
+    match c with 
         | x -> 1 
         | x -> 2
-        )
 
 ()
