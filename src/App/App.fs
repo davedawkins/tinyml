@@ -99,13 +99,18 @@ module Mvu =
             |> Option.iter (fun model ->
                 MonacoEditor.Monaco.editor.setModelMarkers( model, owner, [| m |]  ))
 
-    let loadExamples( fs : IFileSystem) = 
+    let loadExample (fs : IFileSystem) file =
+        promise {
+            let! response = Fetch.fetch ("/examples/" + file) []
+            let! content = response.text()
+
+            fs.SetFileContent( "/" + file, content )
+        }
+
+    let loadExamples( fs : IFileSystem ) = 
         promise {
             for file in examples do
-                let! response = Fetch.fetch ("/examples/" + file) []
-                let! content = response.text()
-
-                fs.SetFileContent( "/" + file, content )
+                do! loadExample fs file
         }
 
     let okCancel (content : Sutil.Core.SutilElement) (confirm : unit -> unit) =
@@ -148,7 +153,13 @@ module Mvu =
         | ResetAllFiles confirmed ->
             let go d =
                 loadExamples ctx.Fs |> Promise.start
-            model, [go]
+            model, 
+                Cmd.batch 
+                    [ 
+                        Cmd.ofMsg (SaveFile (model.EditingFile))
+                        [ go ]
+
+                    ]
 
         | SetIsFileModified z ->
             { model with FileIsModified = z; CompiledObject = None }, Cmd.none
@@ -535,6 +546,7 @@ let initFs (fs : IFileSystem) dispatch =
             let files = fs.Files("/") |> Array.sort
             if (files.Length = 0) then
                 do! Mvu.loadExamples fs
+            do! Mvu.loadExample fs "README.md" // Always overwrite this
             dispatch (OpenFile "README.md")
             return ()
         } |> Promise.start
