@@ -1,0 +1,14 @@
+_deploy() {
+	npm install
+	dotnet restore
+	npm run build
+	npm run deploy:linode
+}
+
+if [ -e buildrepo ]; then
+	./buildrepo
+	(cd ../tinyml-stage; _deploy)
+else
+	_deploy
+fi
+

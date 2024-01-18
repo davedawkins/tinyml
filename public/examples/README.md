@@ -56,10 +56,10 @@ print (fac 5)
 
 ## About The Parser
 
-I'm using Parsec.fs, a nearly complete API-compatible port of FParsec to Fable `cannorin` (see Links).
+I'm using Parsec.fs, a nearly complete API-compatible port of FParsec to Fable by `cannorin` (see[Links]).
 
-I had to learn how to parse indentation sensitive syntax, and I found this by the FParsec author to be
-invaluable.
+I had to learn how to parse indentation sensitive syntax, and I found an article by the FParsec author to be
+invaluable (see [Links]).
 
 Error reporting is something I'm still learning how to improve. 
 
