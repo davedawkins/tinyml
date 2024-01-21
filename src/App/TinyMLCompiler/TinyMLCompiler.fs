@@ -90,18 +90,18 @@ type private CompiledObject( name : string, src : string, expr : Expression  )  
 let private compile name src : Result<ICompiledObject, CompilerMessage list> =
 
     try 
-        let compileResult = TinyMLParser.parse name src
+        let expr, errors = TinyMLParser.parse name src
 
-        match compileResult with
-        | Ok e ->
-            let co = CompiledObject( name, src, e  ) :> ICompiledObject
+        match errors with
+        | [] ->
+            let co = CompiledObject( name, src, expr  ) :> ICompiledObject
 
-            match TinyMLTypeInference.infer e with
+            match TinyMLTypeInference.infer expr with
             | Ok t ->
                 Ok co
             | Error x -> Error [x]
             
-        | Result.Error es ->
+        | es ->
             es 
                 |> List.collect (fun (p,m) -> m |> List.map (fun et -> makeMsgFromParser (p,et)))
                 |> Result.Error

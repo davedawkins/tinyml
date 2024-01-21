@@ -339,9 +339,7 @@ module Primitives =
     fun (state, s) ->
       match run p state s with
       | Ok _ as x -> x
-      | Error (errs, state) -> 
-          Error ( (s.pos, [Expected label]):: errs, state)
-         // err1 s.pos (Expected label) state
+      | Error (errs, state) -> err1 s.pos (Expected label) state
 
   let inline fail (msg: string) : Parser<'a, 's> = fun (state, s) -> err1 s.pos (Message msg) state
 

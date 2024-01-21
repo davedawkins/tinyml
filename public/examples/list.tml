@@ -15,5 +15,15 @@ let rec plist list =
         | y -> 
             ()
         
+let rec map f list = 
+    match list with
+        | xs ->
+            cons (f xs#1) (map f xs#2)
+        | empty ->
+            nil
+
 plist nil
-plist (cons 1 (cons 2 (cons 3 nil)))
+let list1 = (cons 1 (cons 2 (cons 3 nil)))
+plist list1
+
+let list2 = (map (fun x -> x * 2) list1) in print list2

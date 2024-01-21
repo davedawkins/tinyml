@@ -29,7 +29,7 @@ let constant : Parser<_,UserState> =
 
 // Fixme: >>= is made for doing this
 let variable : Parser<Expression,_> = 
-    notKeyword identifier |>>> Variable
+    notKeyword identifier|>>> Variable
 
 let ifthenelse : Parser<Expression,UserState> =
     breakable (
@@ -69,9 +69,7 @@ let letb =
         .>>. (many (namet .>> ws) ) .>> ws
         .>>  (wsb >>. (keyword "=" )) 
         .>>. (wsb >>. (expr <!> "expression for binding"))
-        .>>. opt (
-                (wsb >>. keyword "in") >>. (wsb >>. expr)
-        ) <!> "expression for let"
+        .>>. opt_unless (wsb >>. keyword "in" .>> wsb) ((expect "expression for 'in'" (expr <!> "'in'-expression")) <!> "expect in-expression")
     )
     |>>> (fun x -> 
         let (((((r,name),args),e1),e2),t) = x
@@ -82,11 +80,13 @@ let letb =
             | [] -> e
             | a::xs -> Lambda(a, desugar xs e)
 
-        let e1_desugared = desugar args e1
+        let e1_curried = desugar args e1
+
+        let e2 = e2 |> Option.map snd
 
         match r with
-        | Some _ -> Recursive (name, e1_desugared, e2,t)
-        | _ -> Let (name, e1_desugared, e2,t)
+        | Some _ -> Recursive (name, e1_curried, e2,t)
+        | _ -> Let (name, e1_curried, e2,t)
         )
 
 let lambda = 
@@ -126,45 +126,56 @@ let parseCaseValue =
         )
 
 let _term : Parser<_,UserState> =
-    choiceWithLookAhead [
+    choiceWithLookAheadL "term" [
         followedBy (keyword "true"), (keyword "true" |>>> (fun (_,t) -> ConstantB (true,t) ))
         followedBy (keyword "false"), (keyword "false" |>>> (fun (_,t) -> ConstantB (false,t) ))
-        followedBy (keyword "do"), block
-        followedBy (keyword "("), subexpr
-        followedBy (keyword "["), listexpr
-        followedBy (keyword "union" <|> keyword "u<" <|> keyword "_.case"), parseCaseValue
-        followedBy (satisfy (fun c -> c = '-' || isDigit c)), constant
-        followedBy (pident0), variable
-    ] <!> "term"
+        followedBy (keyword "do"), (expect "block" block)
+        followedBy (keyword "("), (expect "subexpression" subexpr)
+        followedBy (keyword "["), (expect "list" listexpr)
+        followedBy (keyword "union" <|> keyword "u<" <|> keyword "_.case"), (expect "case value" parseCaseValue)
+        followedBy (satisfy (fun c -> c = '-' || isDigit c)), (expect "number" constant)
+        followedBy (pident0), (expect "variable" variable)
+    ]
 
 termRef.Value <- _term
 
-let application = 
-    (many1 (term .>> ws) |>> (reduceLeft Application)) <!> "application"
-
-let factor = 
-    choiceWithLookAhead [
-        followedBy (keyword "fun"), lambda <!> "lambda"
-        followedBy (keyword "if"), ifthenelse <!> "ifthenelse"
-        followedBy (keyword "match"), matchwith <!> "matchwith"
-        followedBy (keyword "let"), letb <!> "letb"
-        followedBy (term), application
-    ] <!> "factor"
-
 let tupleget =
-    factor .>>. (opt (keyword "#" >>. (pchar '1' <|> pchar '2'))) .>> ws 
+    term .>>. (opt (keyword "#" >>. (pchar '1' <|> pchar '2'))) .>> ws 
     |>> (fun (e,c) -> 
             match c with 
             | None -> e 
             | Some dig -> TupleGet( (dig = '1') , e )
         )
 
+let application = 
+    (many1 (tupleget .>> ws) |>> (reduceLeft Application)) <!> "application"
+
+let factor = 
+    choiceWithLookAheadL "factor" [
+        followedBy (keyword "fun"), (expect "lambda" lambda) <!> "lambda"
+        followedBy (keyword "if"), (expect "if-then-else" ifthenelse) <!> "ifthenelse"
+        followedBy (keyword "match"), matchwith <!> "matchwith"
+        followedBy (keyword "let"), (expect "let binding" letb) <!> "letb"
+        followedBy (term), application
+    ]
+
+let tolerantOp op : Parser<string,UserState> =
+    tolerant op "?" (skipManySatisfy (fun c -> not (isBlank c)))
+
+let tolerantExpr expr : Parser<Expression,UserState> =
+    tolerant
+        expr
+        (Unit SourceToken.Empty)
+        (skipManySatisfy (not<<isBlankEol) .>> ws)
+
+
 let _binaryMulExpr =
-    binaryp 
-        (tupleget .>> ws) 
-        (mulOp .>> ws) 
-        (binaryMulExpr .>> ws) 
-        (fun e1 (op,e2) -> Binary(op,e1,e2))
+    breakable <|
+        binaryp 
+            (factor .>> ws) 
+            (mulOp .>> ws) 
+            ((expect "expression for rhs" binaryMulExpr) .>> ws) 
+            (fun e1 (op,e2) -> Binary(op,e1,e2))
 
 let _binaryAddExpr =
     binaryp 
@@ -191,9 +202,17 @@ let blockExprSeparator =
     wsbreak .>> notFollowedBy (eol <|> eof)
     <!> "blockExprSeparator"
 
+let exprItem = 
+    tolerant 
+        expr
+        (Unit SourceToken.Empty)
+        skipToNextWsb
+        //(skipManyTill skipAnyChar indentCurrentOrLower)
+
 let _blockExpr =
-    breakable (sepBy1 expr blockExprSeparator)
+    breakable ((sepBy1 (exprItem <!?> "expr-item") blockExprSeparator) <!> "expr-sequence")
         |>> (fun es -> match es with [e] -> e | _ -> mkBlock (es))
+        <!> "block-expression"
 
 let _expr =
     tupleExpr <!> "expression"
@@ -237,20 +256,47 @@ let unflattenExpr (e : Expression) =
     | Block (es) -> (unflattenLets es) |> mkBlock
     | _ -> e
 
-let document : Parser<Expression,_> =
-    //
-    // blockExprSeparator is easy way to consume comments at start of file
-    //
-    (opt blockExprSeparator) >>. 
-    blockExpr .>> 
-    (ws >>. trailingwseol) 
-    <!> "document"
-        
+let punitexpr : Parser<Expression, UserState> = preturn (Unit (SourceToken.Empty))
 
-let parse (name: string) (src: string) : Result<Expression,_> =
+let program =
+    blockExpr .>> 
+    commentsWs .>> 
+    peos
+
+let document : Parser<Expression,_> =
+    commentsWs >>.
+
+    // Allow empty file to be a valid program, of type 'unit'
+    choiceWithLookAheadL "program" [
+        (followedBy peos) <!> "check: EOS", preturn (Unit (SourceToken.Empty))
+        (preturn ()) <!> "check: program", program
+    ] 
+
+    <!> "document"
+
+let comparePosition (a : Position) (b : Position) =
+    match a.Line - b.Line with
+    | 0 -> a.Col - b.Col
+    | x -> x
+    |> System.Math.Sign
+
+let collectMessages (msgs : (Position * ErrorMessage) list) =
+    msgs |> List.collect (fun (p,e) -> e |> List.map (fun e -> p,e))
+
+let filterMessages (msgs : (Position * ErrorMessage) list) =
+    let messages = collectMessages msgs |> Array.ofList |> Array.sortWith (fun a b -> -comparePosition (fst a) (fst b))
+    match messages.Length with
+    | 0 -> [   ]
+    | _ -> 
+        let (pos, errorType) = messages[0]
+        [
+            pos, [ errorType ]
+        ]
+
+let parse (name: string) (src: string) : Expression * (Position * ErrorMessage) list =
     match runString document (UserState.Create()) src with
-    | Ok (value,_,_) ->
-        Result.Ok (unflattenExpr value)
+    | Ok (value,_,state) ->
+        (unflattenExpr value, state.Errors)
     | Error (msgs,_) ->
-        Error (msgs)
+        (Unit (SourceToken.Empty), msgs)
 
