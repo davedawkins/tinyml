@@ -100,7 +100,9 @@ let rec solve (cs : List<Type*Type*SourceToken>): list<string*Type*SourceToken> 
 
     | (t, TyVariable v, tok)::constraints 
     | (TyVariable v, t, tok)::constraints ->
-        if occursCheck v t then failwith "Recursive definition"
+        if occursCheck v t then 
+            raise (ParseException( Severity.Error, (sprintf "Recursive definition: %s : %s" v (t.ToString())),tok))
+            //failwith "Recursive definition"
         let constraints = substConstrs (Map [v, t]) constraints
         let subst = solve constraints
         let t = substituteAll subst t

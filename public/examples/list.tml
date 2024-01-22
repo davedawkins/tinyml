@@ -1,29 +1,91 @@
 //
 // This is a TinyML implementation of a list type using unions, tuples and recursion
 
+/// The empty list
 let nil = _.case2 ()
 
+/// Make a new list with x as the head and xs as the tail
 let cons x xs = 
     u<num * _,unit>.case1 (x, xs)
 
+/// Return the head of the list
+let head list = 
+    match list with
+        | xs -> xs#1
+        | empty -> -1 // TODO: raise exception
+
+/// Return the tail of the list
+let tail list = 
+    match list with
+        | xs -> xs#2
+        | empty -> nil // TODO: raise exception
+
+/// Print the list
 let rec plist list = 
     match list with 
         | x -> 
             do
-                print (x#1)
-                plist (x#2)
+                print (head list)
+                plist (tail list)
         | y -> 
             ()
-        
+
+/// Append two lists
+let rec append l1 l2 =
+    match l1 with
+        | xs -> 
+            cons (head l1) (append (tail l1) l2)
+        | empty -> 
+            l2
+
+/// Map the given list using the given function
 let rec map f list = 
     match list with
         | xs ->
-            cons (f xs#1) (map f xs#2)
+            cons (f (head list)) (map f (xs#2))
         | empty ->
             nil
 
+/// Filter the list using the given predicate
+let rec filter p list =
+    match list with
+        | xs ->
+            let remainder = filter p (tail list) in
+            if (p (xs#1)) then
+                cons (xs#1) remainder
+                else remainder
+        | empty -> 
+            nil
+
+/// Fold the list using given function 'f', starting with the first element
+let rec fold folder state list = 
+    match list with
+        | xs ->
+            let state = folder state xs#1 in
+                fold folder state xs#2
+        | empty -> 
+            state
+
+/// Fold the list using given function 'f', starting with the last element
+let rec foldBack folder list state = 
+    match list with
+        | xs ->
+            folder xs#1 (foldBack folder xs#2 state)
+        | empty -> 
+            state
+
 plist nil
+
 let list1 = (cons 1 (cons 2 (cons 3 nil)))
 plist list1
 
-let list2 = (map (fun x -> x * 2) list1) in print list2
+let list2 = (map (fun x -> x * 2) list1) in plist list2
+
+let list3 = (filter (fun x -> x > 1) list1) in plist list3
+
+plist (append list1 list1)
+
+print (fold (fun a b -> a - b) 0 (append list1 list1))
+print (foldBack (fun a b -> a - b) (append list1 list1) 0)
+
+print 0

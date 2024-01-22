@@ -74,13 +74,12 @@ let letb =
     |>>> (fun x -> 
         let (((((r,name),args),e1),e2),t) = x
 
-        let rec desugar args e =
-
+        let rec curry args e =
             match args with
             | [] -> e
-            | a::xs -> Lambda(a, desugar xs e)
+            | a::xs -> Lambda(a, curry xs e)
 
-        let e1_curried = desugar args e1
+        let e1_curried = curry args e1
 
         let e2 = e2 |> Option.map snd
 
@@ -91,10 +90,21 @@ let letb =
 
 let lambda = 
     (keyword "fun" <!> "'fun' keyword")
-    >>. (ws1  >>. (namet <!> "argument")) 
+    >>. ws1  
+    //>>. namet
+    >>. (many (namet .>> ws) ) .>> ws
     .>> (ws >>. (keyword "->" <!> "'->' operator")) 
     .>>. (ws >>. (expr <!> "value for binding")) 
-    |>> Lambda
+
+    |>>> (fun ((args,expr),tok) ->
+
+        let rec curry args e =
+            match args with
+            | [] -> e
+            | a::xs -> Lambda(a, curry xs e)
+
+        curry args expr)
+
     <!> "lambda"
 
 let subexpr = 

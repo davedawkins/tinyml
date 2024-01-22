@@ -238,6 +238,13 @@ module Mvu =
                 if file.EndsWith ".tml" then dispatch Compile
             { model with EditingFile = file; FileLastSavedVersionId = FileEditor.getAlternativeVersionId() }, [ go ]
 
+        | OpenFileOnly file ->
+            let go dispatch =
+                if model.EditingFile <> "" then
+                    dispatch (SaveFile model.EditingFile)
+                FileEditor.edit FileEditor.editor file (fs.GetFileContent file)
+            { model with EditingFile = file; FileLastSavedVersionId = FileEditor.getAlternativeVersionId() }, [ go ]
+
         | ClearLog -> 
             Log.clear()
             model, Cmd.none
@@ -460,6 +467,7 @@ let oxideToolbar context (model : IStore<Mvu.Model>) dispatch =
             buttonItem [ ButtonProperty.Label "Download";   ButtonProperty.Icon "fa-file-export"; OnClick (fun e -> BlobUrl.downloadFs (context.Fs) "tinyml" |> Promise.start) ]
             buttonItem [ ButtonProperty.Label "Save";   ButtonProperty.Icon "fa-save"; OnClick (fun e -> dispatch (SaveFile model.Value.EditingFile)) ]
             buttonItem [ ButtonProperty.Label "Tests";   ButtonProperty.Icon "fa-hands-asl-interpreting"; OnClick (fun e -> dispatch RunTests ) ]
+            buttonItem [ ButtonProperty.Label "Edit"; ButtonProperty.Icon "fa-sharp fa-light fa-edit"; OnClick (fun e -> dispatch (OpenFileOnly model.Value.SelectedFile)) ]
             buttonItem [ ButtonProperty.Label "Compile"; ButtonProperty.Icon "fa-sharp fa-light fa-gear-complex-code"; OnClick (fun e -> dispatch Compile) ]
             buttonItem [ ButtonProperty.Label "Run";   ButtonProperty.Icon "fa-play"; OnClick (fun e -> dispatch Run ) ]
             buttonItem [ ButtonProperty.Label "Debug";   ButtonProperty.Icon "fa-bug"; OnClick (fun e -> dispatch (SetDebugEnabled (not model.Value.DebugEnabled)) ) ]

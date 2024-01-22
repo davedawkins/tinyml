@@ -1,7 +1,10 @@
 ## TinyML
 
 > [!TIP]
-> 18-Jan-24: Examples have been updated (see [Updates]) - use `Reset` to reload
+> 22-Jan-24: 
+> Improvements to error handling
+> 18-Jan-24: 
+> Examples have been updated (see [Updates]) - use `Reset` to reload
 
 This is a follow-on project based on Tomas Petricek's Tiny Systems course:
 

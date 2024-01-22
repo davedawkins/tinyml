@@ -120,6 +120,7 @@ type Message =
     | Compile
     | Run
     | OpenFile of string
+    | OpenFileOnly of string
     | NewFile of string
     | SaveFile of string
     | SetFiles of string list
