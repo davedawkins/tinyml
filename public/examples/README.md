@@ -3,6 +3,8 @@
 > [!TIP]
 > 22-Jan-24: 
 > Improvements to error handling
+> Support curried lambda. 
+> Examples of fold, foldBack, append, filter, head, tail (use `Reset` to get latest list.tml)
 > 18-Jan-24: 
 > Examples have been updated (see [Updates]) - use `Reset` to reload
 
