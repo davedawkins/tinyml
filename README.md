@@ -1,6 +1,9 @@
 ## TinyML
 
 > [!TIP]
+> 31-Jan-24:
+> Let polymorphism implemented for type inference 
+> Added blackbird.tml example - use `Reset`
 > 22-Jan-24: 
 > Improvements to error handling
 > Support curried lambda. 

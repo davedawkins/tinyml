@@ -1,27 +1,43 @@
 module Types
 
-type Type =
+
+type SourceToken = 
+    {
+        File : string
+        StartLine : int; StartCol : int
+        EndLine : int; EndCol : int
+    }
+    with 
+    static Empty = { File = ""; StartLine = 0; StartCol = 0; EndLine = 0; EndCol = 0 }
+    member __.Contains ( line, col ) =
+        (line = __.StartLine && col >= __.StartCol) && (line = __.EndLine && col <= __.EndCol) ||
+        (line > __.StartLine && line < __.EndLine)
+
+type TType = Type * SourceToken
+
+and Type =
     | TyVariable of string
     | TyBool
     | TyNumber
-    | TyList of Type
-    | TyFunction of Type * Type
-    | TyTuple of (Type * Type)
-    | TyUnion of (Type * Type)
+    | TyList of TType
+    | TyFunction of TType * TType
+    | TyTuple of (TType * TType)
+    | TyUnion of (TType * TType)
     | TyUnit
     | TyAny
   with 
+    static NoSource (t : Type) : TType = t, SourceToken.Empty
     override this.ToString() =
       match this with
       | TyAny -> "any"
       | TyUnit -> "unit"
-      | TyUnion (a,b) ->
+      | TyUnion ( (a, _) , (b, _) ) ->
             sprintf "case<%s,%s>" (a.ToString()) (b.ToString())
 
-      | TyTuple (a,b) ->
+      | TyTuple ((a, _) , (b, _) ) ->
             sprintf "(%s * %s)" (a.ToString()) (b.ToString())
       
-      | TyFunction (a,r) -> 
+      | TyFunction ((a, _) , (r, _) ) -> 
             // sprintf "(%s -> %s)" (a.ToString()) (r.ToString())
             match a with 
             | TyFunction _ ->
@@ -33,24 +49,23 @@ type Type =
       | TyNumber -> "num"
       | TyList t -> sprintf "list<%s>" (t.ToString())
 
+type TypeScheme = TypeScheme of string list * TType
+    with
+        override __.ToString() =
+            match __ with TypeScheme (vars, t) -> 
+                sprintf "forall %A . %s" (vars |> Array.ofList) (t.ToString())
+
 type QualifiedName = 
     {
         Name : string
         Path : string []
     }
 
-type SourceToken = 
-    {
-        StartLine : int; StartCol : int
-        EndLine : int; EndCol : int
-    }
-    with 
-    static Empty = { StartLine = 0; StartCol = 0; EndLine = 0; EndCol = 0 }
-    member __.Contains ( line, col ) =
-        (line = __.StartLine && col >= __.StartCol) && (line = __.EndLine && col <= __.EndCol) ||
-        (line > __.StartLine && line < __.EndLine)
 
 type Name = Name of (string * SourceToken)
+
+
+let typeOf (tt : TType) = fst tt
 
 [<RequireQualifiedAccess>]
 type Severity = Error | Warning | Info
@@ -98,7 +113,7 @@ type Ast( label : string, token : unit -> SourceToken, children : seq<IAst> ) =
 type ICompiledObject =
     abstract Run: unit -> Result<obj,string>
     abstract Ast: IAst
-    abstract TypeOf : IAst -> Type option
+    abstract TypeOf : IAst -> TType option
 
 type ICompiler =
     abstract Name : string

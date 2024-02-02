@@ -188,29 +188,32 @@ open Debug
 
 type UserState = 
     {
+        File : string
         Indentation: int
         IsTopLevel : bool
         JsxTags : string list
         Errors : (Position * ErrorMessage) list
     }
     with
-        static member Create() = { Indentation = -1; IsTopLevel = false; JsxTags = []; Errors = [] }
+        static member Create(file) = { File = file; Indentation = -1; IsTopLevel = false; JsxTags = []; Errors = [] }
         override this.ToString() = sprintf "[Indentation=%d]" this.Indentation
 
 let stringToInt (s : string) : int = System.Int32.Parse s
 
 let rtuple b a = a,b
 
-let makeToken s s' =
+let makeToken f s s' =
     { 
+        File = f
         StartLine = s.startLine
         EndLine = s'.startLine
         StartCol = s.startColumn
         EndCol = s'.startColumn
     }
 
-let mergeSourceTokens a b =
+let mergeSourceTokens (a : SourceToken) (b : SourceToken) =
     {
+        File = a.File
         StartLine = System.Math.Min(a.StartLine, b.StartLine)
         StartCol = 
             if (a.StartLine < b.StartLine) then a.StartCol
@@ -224,13 +227,18 @@ let mergeSourceTokens a b =
             else System.Math.Min( a.EndCol, b.EndCol )
     }
 
-/// Support for accessing the source token when building the parser value
-let pmaps (p: Parser<'a, 's>) (f: ('a * SourceToken) -> 'b) : Parser<'b, 's> =
+let (<+>) t1 t2 = mergeSourceTokens t1 t2
+
+let withToken (p : Parser<'a,UserState>) : Parser<'a * SourceToken,UserState> =
     fun (state, s) ->
         match run p state s with
         | Error e -> Error e
         | Ok (r, s', state) -> 
-            Ok (f (r, makeToken s s'), s', state)
+            Ok ((r, makeToken (state.File) s s'), s', state)
+
+/// Support for accessing the source token when building the parser value
+let pmaps (p: Parser<'a, UserState>) (f: ('a * SourceToken) -> 'b) : Parser<'b, UserState> =
+    withToken p |>> f
 
 let peos : Parser<unit, _> =
     fun (state, s) ->
@@ -242,6 +250,9 @@ let peos : Parser<unit, _> =
 /// Like |>> but also supplies the source token
 let inline ( |>>> ) p f =
     pmaps p f
+
+let inline ( |/> ) p f =
+    withToken p |>> (fun (r, t) ->  f r, t)
 
 let singleSpaceTabEol =
     isAnyOf [ ' '; '\t'; '\n'; '\r' ]
@@ -482,42 +493,42 @@ let namet : Parser<_,UserState> =
 
 let pcons = (keyword "::" .>> ws)
 
-let (parseType : Parser<Type,_>), parseTypeRef = createParserForwardedToRef()
-let (parseTypeTuple : Parser<Type,_>), parseTypeTupleRef = createParserForwardedToRef()
-let (parseTypeLambda : Parser<Type,_>), parseTypeLambdaRef = createParserForwardedToRef()
+let (parseType : Parser<Type * SourceToken,_>), parseTypeRef = createParserForwardedToRef()
+let (parseTypeTuple : Parser<Type * SourceToken,_>), parseTypeTupleRef = createParserForwardedToRef()
+let (parseTypeLambda : Parser<Type * SourceToken,_>), parseTypeLambdaRef = createParserForwardedToRef()
 
-let parseUnionType : Parser<Type,_> =
+let parseUnionType : Parser<Type * SourceToken,_> =
     (keyword "union<" <|> keyword "u<") .>> ws 
         >>. parseType .>> ws 
         .>> keyword "," .>> ws 
         .>>. parseType .>> ws 
         .>> keyword ">"
-    |>> (fun (t1,t2) -> TyUnion (t1,t2))
+    |>> (fun ( (t1, tk1), (t2, tk2) ) -> TyUnion ((t1,tk1),(t2,tk2)),  tk1 <+> tk2) 
 
-let parseAnyType = (keyword "_" |>> (fun _ -> TyAny))
+let parseAnyType = (keyword "_" |/> (fun _ -> TyAny))
 
-let parseTypeTerm : Parser<Type,UserState> =
-    (keyword "num" |>> (fun _ -> TyNumber))
+let parseTypeTerm : Parser<Type * SourceToken,UserState> =
+    (keyword "num" |/> (fun _ -> TyNumber))
     <|> 
     parseAnyType
     <|> 
-    (keyword "unit" |>> (fun _ -> TyUnit))
+    (keyword "unit" |/> (fun _ -> TyUnit))
     <|>
     parseUnionType
 
-let _parseTypeTuple : Parser<_,UserState> = 
+let _parseTypeTuple : Parser<Type * SourceToken,UserState> = 
     binaryp
         (parseTypeTerm .>> ws)
         (keyword "*" .>> ws)
         (parseTypeTuple .>> ws)
-        (fun (lhs) (_,rhs) -> TyTuple(lhs, rhs))
+        (fun (lhs, ltok) (_,(rhs, rtok)) -> TyTuple( (lhs,ltok), (rhs,rtok) ), ltok <+> rtok)
 
 let _parseTypeLambda : Parser<_,UserState> = 
     binaryp
         (parseTypeTuple .>> ws)
         (keyword "->" .>> ws)
         (parseTypeLambda .>> ws)
-        (fun (lhs) (op,rhs) -> TyFunction(lhs, rhs))
+        (fun (lhs, ltok) (_,(rhs,rtok)) -> TyFunction( (lhs,ltok), (rhs, rtok) ), ltok <+> rtok)
 
 let _parseType = parseTypeLambda
 
@@ -527,9 +538,9 @@ do
     parseTypeRef.Value <- _parseType
 
 let parseCase =
-    (parseUnionType <|> (parseAnyType |>> (fun _ -> TyUnion(TyAny,TyAny)))) .>> keyword "." .>>. (keyword "case1" <|> keyword "case2") .>> ws
-
-
+    (parseUnionType 
+        <|> 
+    (parseAnyType |/> (fun (_,tk) -> TyUnion((TyAny,tk),(TyAny,tk))))) .>> keyword "." .>>. (keyword "case1" <|> keyword "case2") .>> ws
 
 let expect (expected : string) (p : Parser<'a,UserState>) : Parser<'a,UserState> =
     fun (state, input) ->

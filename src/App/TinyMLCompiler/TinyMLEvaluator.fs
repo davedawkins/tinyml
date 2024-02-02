@@ -5,7 +5,7 @@ open Types
 
 let toNum (n : bool) = (if n then 1 else 0) |> ValNum
 
-let rec evaluate (ctx: VariableContext) e =
+let rec evaluate (ctx: VariableContext) (e, etok) =
     match e with
     | ConstantL es ->
         es |> List.map (evaluate ctx) |> ValList
@@ -13,10 +13,10 @@ let rec evaluate (ctx: VariableContext) e =
     | Block (es) ->
         es |> List.fold (fun _ e -> evaluate ctx e) ValUnit
 
-    | Constant (n,_) -> 
+    | Constant (n) -> 
         ValNum n
 
-    | ConstantB (n,_) -> 
+    | ConstantB (n) -> 
         ValBool n
 
     | Binary(op, e1, e2) ->
@@ -38,14 +38,14 @@ let rec evaluate (ctx: VariableContext) e =
             | _ -> failwith "unsupported binary operator"
         | _ -> failwith "invalid argument of binary operator"
 
-    | Variable (v,_) ->
+    | Variable (v) ->
         match ctx.TryFind v with
         | Some res -> res.Value
         | _ -> failwith ("unbound variable: " + v)
 
     // NOTE: You have the following from before
 
-    | Unary(op, e,_) ->
+    | Unary(op, e) ->
         let v = evaluate ctx e
 
         match v with
@@ -55,14 +55,14 @@ let rec evaluate (ctx: VariableContext) e =
             | _ -> failwith "unsupported unary operator"
         | _ -> failwith "unary operations not supported for this type"
 
-    | If(c, e1, e2, tok) ->
+    | If(c, e1, e2) ->
         let cv = evaluate ctx c
 
         match cv with
         | ValNum 1 -> evaluate ctx e1
         | _ -> evaluate ctx e2
 
-    | Lambda( Name (v,_), e) -> ValClosure(v, e, ctx)
+    | Lambda( Name (v,_), e ) -> ValClosure(v, e, ctx)
 
     | Application(e1, e2) ->
         let v1, v2 = (evaluate ctx e1), (evaluate ctx e2)
@@ -72,10 +72,10 @@ let rec evaluate (ctx: VariableContext) e =
         | ValBuiltIn builtin -> builtin v2
         | _ -> failwith (sprintf "%A is not a function and cannot be applied" e1)
 
-    | Let(v, e1, e2opt, _) -> 
+    | Let(v, e1, e2opt) -> 
         match e2opt with
-        | Some e2 ->
-            Application(Lambda(v, e2), e1) |> evaluate ctx
+        | Some ((e2_expr, e2_token) as e2) ->
+            (Application( (Lambda(v, e2), e2_token)  , e1), etok) |> evaluate ctx
         | _ ->
             evaluate ctx e1 |> ignore
             ValUnit
@@ -96,7 +96,7 @@ let rec evaluate (ctx: VariableContext) e =
 
     | Case(ut, b, e) -> ValCase(b, evaluate ctx e)
 
-    | Recursive( Name(v,_), e1, e2, _) ->
+    | Recursive( Name(v,_), e1, e2) ->
 
         // let lambda = Lambda(v, e2)
         //let desugared =  Application( lambda, e1 )
@@ -110,4 +110,4 @@ let rec evaluate (ctx: VariableContext) e =
         | _ -> ValUnit
 
     // NOTE: This is so uninteresting I did this for you :-)
-    | Unit _ -> ValUnit
+    | Unit -> ValUnit

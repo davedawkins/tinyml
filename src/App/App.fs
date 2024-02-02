@@ -16,6 +16,7 @@ open Fable.Core
 let [<Import("getMonarch","./monarch.js")>] getMonarch: unit -> MonacoEditor.Monaco.Languages.IMonarchLanguage = jsNative
 
 let examples = [
+    "blackbird.tml"
     "compose.tml"
     "curry.tml"
     "datatypes.tml"
@@ -276,7 +277,7 @@ module Mvu =
                         dispatch (SetCompiledObject (Some result))
                     | Result.Error es ->
                         Log.log( "Program compilation failed")
-                        es |> List.iter (fun (sev, msg, tok) -> Log.log(sprintf "[%d:%d] %s: %s" tok.StartLine tok.StartCol (string sev) msg))
+                        es |> List.iter (fun (sev, msg, tok) -> Log.log(sprintf "%s(%d:%d): %s: %s" tok.File tok.StartLine tok.StartCol (string sev) msg))
 
                         dispatch (SetCompiledObject None)
                         dispatch ClearMarkers
@@ -335,7 +336,7 @@ let hover (model : IStore<Mvu.Model>) (position : MonacoEditor.Monaco.Position)=
     | Some co ->
         findAstAt co.Ast (int position.lineNumber - 1, int position.column - 1)
         |> List.choose (fun a -> co.TypeOf a |> Option.map (fun t -> t,a))
-        |> List.map (fun (t,a) -> sprintf "%s: %s" a.Label (t.ToString()))
+        |> List.map (fun (t,a) -> sprintf "%s: %s" a.Label ((typeOf t).ToString()))
         |> Array.ofList
         |> Some
     | None ->
@@ -403,7 +404,7 @@ let rec viewAstNode (model : IStore<Mvu.Model>) dispatch (co : ICompiledObject) 
                 text ast.Label
                 match co.TypeOf ast with
                 | None -> text ""
-                | Some t -> Html.spanc "ast-type" [ text (" : " + t.ToString()) ]
+                | Some (t,_) -> Html.spanc "ast-type" [ text (" : " + t.ToString()) ]
             ]
             Ev.onClick (fun _ -> dispatch (SelectAst (ast)))
         ]

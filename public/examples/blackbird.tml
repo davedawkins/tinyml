@@ -1,0 +1,50 @@
+//
+// Function composition (combinator)
+//
+let compose f g = fun x -> f (g x)
+
+//
+// blackbird is a Smullyan operator [3], and is introduced
+// in this presentation "Point-free or die" [1] [2].
+//
+let blackbird = compose compose compose
+
+// blackbird is is equivalent to this definition:
+// let blackbird' f g = fun x y -> f (g x y)
+
+// Functions for us to compose
+let sq  n   = n * n
+let inc n   = n + 1
+let neg n   = 0 - n
+let add x y = x + y
+let mul x y = x * y
+
+// -- minc --
+// type    : num -> num -> num
+// returns : inc (mul $1 $2)
+let minc = blackbird inc mul
+
+print (minc 4 15) // output: 61
+
+// What happens is blackbird blackbird with itself? 
+// Let's call it 'eagle' !
+// This will compose 3 functions into a single function
+// that expects 3 numeric arguments
+
+// -- eagle --
+// type    : ('e -> 'f) -> ('c -> 'd -> 'e) -> ('a -> 'b -> 'c) 
+//           -> 'a -> 'b -> 'd -> 'f
+// returns : fun x y z -> $1 ($2 z ($3 x y)) 
+let eagle = blackbird blackbird blackbird
+
+// -- masq --
+// type    : num -> num -> num -> num
+// returns : sq (add $1 (mul $2 $3))
+let masq = eagle sq add mul  // s
+
+print (masq 2 5 15) // output 625: mul 2 5 |> add 15 |> sq
+
+// References
+// [1] https://www.youtube.com/watch?v=seVSlKazsNk
+// [2] https://drewboardman.github.io/jekyll/update/2020/01/14/blackbird-operator.html
+// [3] https://en.wikipedia.org/wiki/To_Mock_a_Mockingbird

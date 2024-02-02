@@ -3,12 +3,11 @@ module TinyMLCompiler
 open Types
 open TinyMLAst
 
-let private makeMsgFromParser (pos : Parsec.Position, et : Parsec.ErrorType ) =
-    Severity.Error, et.ToString(), { StartLine = pos.Line; StartCol = pos.Col; EndLine = pos.Line; EndCol = pos.Col }
+let private makeMsgFromParser (file: string, pos : Parsec.Position, et : Parsec.ErrorType ) =
+    Severity.Error, et.ToString(), { File = file; StartLine = pos.Line; StartCol = pos.Col; EndLine = pos.Line; EndCol = pos.Col }
 
 let private makeMsgFromMsgToken ( msg : string, tok : SourceToken ) =
     Severity.Error, msg, tok
-
 
 module BuiltIns =
 
@@ -21,13 +20,13 @@ module BuiltIns =
         ValUnit
 
 
-type private CompiledObject( name : string, src : string, expr : Expression  )  =
+type private CompiledObject( name : string, src : string, expr : TExpression  )  =
     let _ast = mkAst expr
 
     let _sys = 
-        [ "print", ( (TyFunction (TyAny, TyUnit)), ValBuiltIn BuiltIns.print)
-          "alert", ( (TyFunction (TyAny, TyUnit)), ValBuiltIn BuiltIns.alert) 
-          "version", ( (TyNumber), ValNum 1) 
+        [ "print", ( (Type.NoSource (TyFunction ( Type.NoSource TyAny, Type.NoSource TyUnit))), ValBuiltIn BuiltIns.print)
+          "alert", ( (Type.NoSource (TyFunction ( Type.NoSource TyAny, Type.NoSource TyUnit))), ValBuiltIn BuiltIns.alert) 
+          "version", (Type.NoSource (TyNumber), ValNum 1) 
           ]
         |> Map
 
@@ -99,11 +98,12 @@ let private compile name src : Result<ICompiledObject, CompilerMessage list> =
             match TinyMLTypeInference.infer expr with
             | Ok t ->
                 Ok co
-            | Error x -> Error [x]
+            | Error x -> 
+                Error [x]
             
         | es ->
             es 
-                |> List.collect (fun (p,m) -> m |> List.map (fun et -> makeMsgFromParser (p,et)))
+                |> List.collect (fun (p,m) -> m |> List.map (fun et -> makeMsgFromParser (name,p,et)))
                 |> Result.Error
     with
     | :? ParseException as x -> Error [ x.Data0 ]

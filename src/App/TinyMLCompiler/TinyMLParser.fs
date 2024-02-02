@@ -6,7 +6,7 @@ open TinyMLAst
 open Types
 open ParserUtil.Debug
 
-let reduceLeft (pair : (Expression * Expression) -> Expression) (list : Expression list) =
+let reduceLeft (pair : (TExpression * TExpression) -> TExpression) (list : TExpression list) =
     let rec go xs =
         match xs with
         | [ e ] -> e
@@ -15,23 +15,23 @@ let reduceLeft (pair : (Expression * Expression) -> Expression) (list : Expressi
         | [] -> failwith "Unexpected empty expression list"
     (go list)
 
-let (expr : Parser<Expression,UserState>), exprRef = createParserForwardedToRef()
+let (expr : Parser<TExpression,UserState>), exprRef = createParserForwardedToRef()
 let binaryMulExpr, binaryMulExprRef = createParserForwardedToRef()
 let binaryAddExpr, binaryAddExprRef = createParserForwardedToRef()
 let binaryRelExpr, binaryRelExprRef = createParserForwardedToRef()
-let (blockExpr : Parser<Expression,UserState>), blockExprRef = createParserForwardedToRef()
+let (blockExpr : Parser<TExpression,UserState>), blockExprRef = createParserForwardedToRef()
 
-let intexpr : Parser<_,UserState> = 
-    intconst |>> Constant
+let intexpr : Parser<TExpression,UserState> = 
+    intconst |>> (fun (i,t) -> Constant i, t)
 
 let constant : Parser<_,UserState> = 
     intexpr    
 
 // Fixme: >>= is made for doing this
-let variable : Parser<Expression,_> = 
-    notKeyword identifier|>>> Variable
+let variable : Parser<TExpression,_> = 
+    notKeyword identifier|/> Variable
 
-let ifthenelse : Parser<Expression,UserState> =
+let ifthenelse : Parser<TExpression,UserState> =
     breakable (
         (keyword "if" .>> wsb) >>.
         (expr .>> wsb) .>>
@@ -40,7 +40,7 @@ let ifthenelse : Parser<Expression,UserState> =
         (keyword "else"  .>> wsb) .>>.
         expr 
     )
-    |>>> (fun (((a,b),c), tok) -> If(a,b,c,tok))
+    |>>> (fun (((a,b),c), tok) -> If(a,b,c), tok)
 
 let caseOf =
     breakable (
@@ -50,7 +50,7 @@ let caseOf =
         expr
     )
 
-let matchwith : Parser<Expression,UserState> =
+let matchwith : Parser<TExpression,UserState> =
     breakable (
         (keyword "match" .>> ws) >>.
         (expr .>> ws) .>>
@@ -58,10 +58,10 @@ let matchwith : Parser<Expression,UserState> =
         caseOf  .>> wsb .>> ws .>>.
         caseOf
     )
-    |>> (fun ((e,(v1,e1)),(v2,e2)) -> Match (e,v1,e1,v2,e2))
+    |/> (fun ((e,(v1,e1)),(v2,e2)) -> Match (e,v1,e1,v2,e2))
     <!> "match"
     
-let letb = 
+let letb : Parser<TExpression, _> = 
     breakable (
         (keyword "let" .>> wsb)
         >>. (opt (keyword "rec" .>> wsb ))
@@ -77,15 +77,15 @@ let letb =
         let rec curry args e =
             match args with
             | [] -> e
-            | a::xs -> Lambda(a, curry xs e)
+            | a::xs -> Lambda(a, curry xs e), t
 
         let e1_curried = curry args e1
 
         let e2 = e2 |> Option.map snd
 
         match r with
-        | Some _ -> Recursive (name, e1_curried, e2,t)
-        | _ -> Let (name, e1_curried, e2,t)
+        | Some _ -> Recursive (name, e1_curried, e2), t
+        | _ -> Let (name, e1_curried, e2), t
         )
 
 let lambda = 
@@ -101,14 +101,14 @@ let lambda =
         let rec curry args e =
             match args with
             | [] -> e
-            | a::xs -> Lambda(a, curry xs e)
+            | a::xs -> Lambda(a, curry xs e), tok
 
         curry args expr)
 
     <!> "lambda"
 
-let subexpr = 
-    (keyword "()" |>>> (fun (_,t) -> Unit t)) <|>
+let subexpr : Parser<TExpression, _> = 
+    (keyword "()" |>>> (fun (_,t) -> Unit, t)) <|>
     ((keyword "(" .>> ws >>. expr .>> ws .>> keyword ")"))
     <!> "subexpr"
 
@@ -116,9 +116,9 @@ let block =
     breakable <|
         (keyword "do") .>> wsbreak >>. blockExpr
 
-let listexpr : Parser<Expression,UserState> = 
+let listexpr : Parser<TExpression,UserState> = 
     between (keyword "[" .>> ws) (keyword "]") (sepBy (expr .>> ws) (keyword ";" .>> ws) )
-    |>> ConstantL
+    |/> ConstantL
 
 let term, termRef = createParserForwardedToRef()
 
@@ -126,19 +126,19 @@ let parseCaseValue =
     parseCase .>>. term |>>>
         (fun (((t,caseId),expr), tok)-> 
             match t with
-            | TyUnion (t1,t2) -> 
+            | TyUnion (t1,t2), _ -> 
                 match caseId with
-                | "case1" -> Expression.Case( t, true, expr )
-                | "case2" -> Expression.Case( t, false, expr )
+                | "case1" -> Expression.Case( fst t, true, expr ), tok
+                | "case2" -> Expression.Case( fst t, false, expr ), tok
                 | _ -> raise (ParseException ( Severity.Error, "Expected 'case1' or 'case2'", tok))
             | _ ->
                 raise (ParseException ( Severity.Error, "Expected union<'a,'b>", tok))
         )
 
-let _term : Parser<_,UserState> =
+let _term : Parser<TExpression,UserState> =
     choiceWithLookAheadL "term" [
-        followedBy (keyword "true"), (keyword "true" |>>> (fun (_,t) -> ConstantB (true,t) ))
-        followedBy (keyword "false"), (keyword "false" |>>> (fun (_,t) -> ConstantB (false,t) ))
+        followedBy (keyword "true"), (keyword "true" |>>> (fun (_,t) -> ConstantB (true), t ))
+        followedBy (keyword "false"), (keyword "false" |>>> (fun (_,t) -> ConstantB (false),t ))
         followedBy (keyword "do"), (expect "block" block)
         followedBy (keyword "("), (expect "subexpression" subexpr)
         followedBy (keyword "["), (expect "list" listexpr)
@@ -149,18 +149,18 @@ let _term : Parser<_,UserState> =
 
 termRef.Value <- _term
 
-let tupleget =
+let tupleget : Parser<TExpression, _> =
     term .>>. (opt (keyword "#" >>. (pchar '1' <|> pchar '2'))) .>> ws 
-    |>> (fun (e,c) -> 
+    |/> (fun ( (e,et) ,c) -> 
             match c with 
             | None -> e 
-            | Some dig -> TupleGet( (dig = '1') , e )
+            | Some dig -> TupleGet( (dig = '1') , (e,et) )
         )
 
 let application = 
-    (many1 (tupleget .>> ws) |>> (reduceLeft Application)) <!> "application"
+    (many1 (tupleget .>> ws) |>>> (fun (tes,tok) -> tes |> reduceLeft (fun (e1,e2) -> Application (e1,e2), tok))) <!> "application"
 
-let factor = 
+let factor : Parser<TExpression,_> = 
     choiceWithLookAheadL "factor" [
         followedBy (keyword "fun"), (expect "lambda" lambda) <!> "lambda"
         followedBy (keyword "if"), (expect "if-then-else" ifthenelse) <!> "ifthenelse"
@@ -175,9 +175,11 @@ let tolerantOp op : Parser<string,UserState> =
 let tolerantExpr expr : Parser<Expression,UserState> =
     tolerant
         expr
-        (Unit SourceToken.Empty)
+        (Unit)
         (skipManySatisfy (not<<isBlankEol) .>> ws)
 
+let mergeTokens (_,t1) (_,t2) =
+    t1 <+> t2
 
 let _binaryMulExpr =
     breakable <|
@@ -185,27 +187,29 @@ let _binaryMulExpr =
             (factor .>> ws) 
             (mulOp .>> ws) 
             ((expect "expression for rhs" binaryMulExpr) .>> ws) 
-            (fun e1 (op,e2) -> Binary(op,e1,e2))
+            (fun e1 (op,e2) -> 
+                Binary(op,e1,e2), (mergeTokens e1 e2)
+            )
 
 let _binaryAddExpr =
     binaryp 
         (binaryMulExpr .>> ws) 
         (addOp .>> ws) 
         (binaryAddExpr .>> ws) 
-        (fun e1 (op,e2) -> Binary(op,e1,e2))
+        (fun e1 (op,e2) -> Binary(op,e1,e2), (mergeTokens e1 e2))
 
 let _binaryRelExpr =
     binaryp 
         (binaryAddExpr .>> ws) 
         (relOp .>> ws) 
         (binaryRelExpr .>> ws) 
-        (fun e1 (op,e2) -> Binary(op,e1,e2))
+        (fun e1 (op,e2) -> Binary(op,e1,e2), (mergeTokens e1 e2))
 
 let tupleExpr = 
     breakable (
         (binaryRelExpr .>> ws) .>>.
         opt (keyword "," >>. ws >>. binaryRelExpr .>> ws) 
-    ) |>> (fun (e1,b) -> match b with Some e2 -> Tuple(e1,e2) | _ -> e1)
+    ) |>> (fun ( e1 , b ) -> match b with Some e2 -> Tuple(e1,e2), snd e1 | _ -> e1)
     <!> "tuple"
 
 let blockExprSeparator =
@@ -215,13 +219,13 @@ let blockExprSeparator =
 let exprItem = 
     tolerant 
         expr
-        (Unit SourceToken.Empty)
+        (Unit, SourceToken.Empty)
         skipToNextWsb
         //(skipManyTill skipAnyChar indentCurrentOrLower)
 
 let _blockExpr =
     breakable ((sepBy1 (exprItem <!?> "expr-item") blockExprSeparator) <!> "expr-sequence")
-        |>> (fun es -> match es with [e] -> e | _ -> mkBlock (es))
+        |>>> (fun (es, tok) -> match es with [e] -> e | _ -> mkBlock (es) tok)
         <!> "block-expression"
 
 let _expr =
@@ -237,48 +241,52 @@ do
 let trailingwseol : Parser<_,UserState> =
     (many (ws >>. eol >>. ws)) <!> "trailingwseol"
 
-let rec unflattenLets (es : Expression list) : Expression list =
+let rec unflattenLets (es : TExpression list) : TExpression list =
     match es with
 
     | [] ->  []
 
-    | [ Recursive (_,_,None, t) ] 
-    | [ Let (_,_,None, t)  ] -> 
+    | [ Recursive (_,_,None), t ] 
+    | [ Let (_,_,None), t  ] -> 
         raise (ParseException ( Severity.Error, "Final 'let' block has no 'in' expression to provide a value", t))
 
-    | Recursive (v,e1,None, t) :: xs  ->
-        [ Recursive( v, e1, Some <| mkBlock (unflattenLets xs),t ) ]
+    | (Recursive (v,e1,None), t) :: xs  ->
+        let uxs = mkBlock (unflattenLets xs) t
+        [ Recursive( v, e1, Some uxs), t ]
 
-    | Recursive (v,e1,Some e2, t) :: xs  ->
-        [ Recursive( v, e1, Some <| mkBlock (e2 :: unflattenLets xs), t ) ]
+    | (Recursive (v,e1,Some e2), t) :: xs  ->
+        let uxs = mkBlock (e2 :: unflattenLets xs) t
+        [ Recursive( v, e1, Some uxs), t ]
 
-    | Let (v,e1,None, t) :: xs  -> 
-        [ Let( v, e1, Some <| mkBlock (unflattenLets xs), t ) ]
+    | (Let (v,e1,None), t) :: xs  -> 
+        let uxs = mkBlock (unflattenLets xs) t
+        [ Let( v, e1, Some uxs), t ]
 
-    | Let (v,e1,Some e2, t) :: xs  -> 
-        [ Let( v, e1, Some <| mkBlock (e2 :: unflattenLets xs), t ) ]
+    | (Let (v,e1,Some e2), t) :: xs  -> 
+        let uxs = mkBlock (e2 :: unflattenLets xs) t
+        [ Let( v, e1, Some uxs), t ]
 
     | x :: xs -> 
         x :: unflattenLets xs
 
-let unflattenExpr (e : Expression) =
+let unflattenExpr (e : TExpression) =
     match e with
-    | Block (es) -> (unflattenLets es) |> mkBlock
+    | Block es, t ->  mkBlock (unflattenLets es) t
     | _ -> e
 
-let punitexpr : Parser<Expression, UserState> = preturn (Unit (SourceToken.Empty))
+let punitexpr : Parser<Expression, UserState> = preturn Unit
 
 let program =
     blockExpr .>> 
     commentsWs .>> 
     peos
 
-let document : Parser<Expression,_> =
+let document : Parser<TExpression,_> =
     commentsWs >>.
 
     // Allow empty file to be a valid program, of type 'unit'
     choiceWithLookAheadL "program" [
-        (followedBy peos) <!> "check: EOS", preturn (Unit (SourceToken.Empty))
+        (followedBy peos) <!> "check: EOS", preturn (Unit, SourceToken.Empty)
         (preturn ()) <!> "check: program", program
     ] 
 
@@ -303,10 +311,10 @@ let filterMessages (msgs : (Position * ErrorMessage) list) =
             pos, [ errorType ]
         ]
 
-let parse (name: string) (src: string) : Expression * (Position * ErrorMessage) list =
-    match runString document (UserState.Create()) src with
+let parse (name: string) (src: string) : TExpression * (Position * ErrorMessage) list =
+    match runString document (UserState.Create(name)) src with
     | Ok (value,_,state) ->
         (unflattenExpr value, state.Errors)
     | Error (msgs,_) ->
-        (Unit (SourceToken.Empty), msgs)
+        ( (Unit, SourceToken.Empty), msgs)
 
